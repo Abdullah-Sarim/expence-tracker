@@ -4,12 +4,15 @@ type Props = {
   data: { name: string; value: number }[];
 };
 
-const COLORS = ["#4f46e5", "#22c55e", "#f59e0b", "#ef4444"];
-
 const renderLabel = ({ percent }: any) =>
   `${(percent * 100).toFixed(0)}%`;
 
 export default function ExpensePieChart({ data }: Props) {
+  const getColor = (index: number) => {
+    const hue = (index * 360) / data.length;
+    return `hsl(${hue}, 70%, 50%)`;
+  };
+
   return (
     <PieChart width={320} height={320}>
       <Pie
@@ -20,7 +23,7 @@ export default function ExpensePieChart({ data }: Props) {
         label={renderLabel}
       >
         {data.map((_, index) => (
-          <Cell key={index} fill={COLORS[index % COLORS.length]} />
+          <Cell key={index} fill={getColor(index)} />
         ))}
       </Pie>
 

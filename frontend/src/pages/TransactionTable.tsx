@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Table,
   TableBody,
@@ -30,9 +30,50 @@ export default function TransactionTable() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-    const { transactions, deleteTransaction } = useTransaction();
-    const onDelete = (id: string) => {
-      deleteTransaction(id);
+    const { transactions, deleteTransaction,setTransactions } = useTransaction();
+  //get transactions from db 
+
+  const gettransactions = async() => {
+    try{
+      const res = await fetch("http://localhost:3000/api/transaction/alltransactions", {
+        method: "GET",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        throw new Error("Failed to fetch transactions");
+      }
+      const data = await res.json();
+      console.log("Fetched transactions:", data);
+      setTransactions(data.transactions);
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+    }
+  };
+  useEffect(()=>{
+    gettransactions();
+  },[])
+ 
+    //delete transaction handler  
+    const onDelete = async(id: string) => {
+      try{
+        console.log("Attempting to delete transaction with ID:", id);
+        const res = await fetch(`http://localhost:3000/api/transaction/delete/${id}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        if (!res.ok) {
+          throw new Error("Failed to delete transaction");
+        } else {   
+          const data =await res.json();
+          console.log(data);
+          deleteTransaction(id);
+                 console.log("Transaction deleted successfully");
+        }
+      }
+      catch (error) {
+        console.error("Error deleting transaction:", error);
+      }
+     
     };
     const  data=transactions;
   

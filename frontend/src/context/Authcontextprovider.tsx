@@ -1,13 +1,19 @@
-import  { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import Authcontext from "./Authcontext";
+
+type User = {
+  _id: string;
+  name: string;
+  email: string;
+};
 
 type AuthProviderProps = {
   children: ReactNode;
 };
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setloading] = useState<boolean>(true);
 
   const fetchuser = async () => {
@@ -22,7 +28,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (res.ok) {
         const data = await res.json();
-        setUser(data.user);
+
+        // ✅ Make sure backend sends { user: {...} }
+        setUser({
+          _id: data.user._id,
+          name: data.user.name,
+          email: data.user.email,
+        });
       } else {
         setUser(null);
       }

@@ -27,10 +27,19 @@ const id = req.user.id;
     newtransaction.userId=id;
     try{
     const temp= await Transaction.create(newtransaction);
+    console.log("Created Transaction:", temp);
+    const responsetransaction = {
+  id: temp._id.toString(), 
+  category: temp.category,
+  amount: temp.amount,
+  type: temp.type,
+  date: temp.date.toISOString().split("T")[0], // optional formatting
+};
+
     return res.status(200).json({
         success:true,
         msg:"transaction created successfully",
-        transaction:newtransaction,
+        transaction:responsetransaction,
     });
 }
 catch(err){
@@ -41,8 +50,9 @@ catch(err){
 }
 }
 export const deletetransaction = async (req: Authrequest, res: Response) => {
+  console.log("Delete Transaction Request Params:", req.params);
   const { id: transactionid } = req.params;
-
+  console.log("Delete Transaction Request for ID:", transactionid);
   if (!transactionid) {
     return res.status(400).json({
       success: false,
@@ -82,9 +92,43 @@ export const deletetransaction = async (req: Authrequest, res: Response) => {
       msg: "transaction deleted successfully",
     });
   } catch (err) {
+    console.log("Error deleting transaction:", err);
     return res.status(500).json({
       success: false,
       msg: "internal server error",
     });
   }
+
 };
+
+export const gettransaction=async(req:Authrequest,res:Response)=>{
+    const userId=req.user?.id;
+    if(!userId){
+        return res.status(401).json({
+            success:false,
+            msg:"user id not found",
+        })
+    }
+    try{
+        const transactions=await Transaction.find({userId});
+
+        const responseTransactions = transactions.map((tx) => ({
+  id: tx._id.toString(),
+  category: tx.category,
+  amount: tx.amount,
+  type: tx.type,
+  date: tx.date.toISOString().split("T")[0], // formatted date
+}));
+
+        return res.status(200).json({
+            success:true,
+            msg:"transactions found",
+            transactions: responseTransactions,
+        });
+    } catch (err) {
+        return res.status(500).json({
+            success:false,
+            msg:"internal server error",
+        });
+    }
+} 

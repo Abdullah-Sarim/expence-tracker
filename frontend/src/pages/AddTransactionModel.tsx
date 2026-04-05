@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/select";
 
 type Transaction = {
-  id: string;
   date: string;
   category: string;
   type: "income" | "expense";
@@ -39,7 +38,6 @@ export default function AddTransactionModal({ onAdd }: Props) {
     if (!amount || !category || !date) return;
 
     const newTx: Transaction = {
-      id: Date.now().toString(),
       amount: Number(amount),
       category,
       type,

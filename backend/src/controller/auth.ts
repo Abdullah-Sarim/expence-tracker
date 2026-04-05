@@ -3,9 +3,12 @@ import {Request,Response} from 'express'
  import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import { Authrequest } from "../middlewares/authmiddleware";
     dotenv.config();
 export const handlelogin=async(req:Request,res:Response)=>{
       const {email,password}=req.body;
+      console.log("Login Request Body:", req.body);
+      console.log('request reached here ');
     if(!email||!password){
        return res.status(400).json({msg:"Enter all fields with valid credentials"});
     }
@@ -26,7 +29,8 @@ export const handlelogin=async(req:Request,res:Response)=>{
     if(!isMatch) {
         return res.status(400).json({msg:"Invalid Password"});
     }
-    const token:string = jwt.sign({id:user._id},process.env.JWT_SECRET_KEY as string,{expiresIn:"24h"});
+    console.log("jwt is :",process.env.SECRETKEY);
+    const token:string = jwt.sign({id:user._id},process.env.SECRETKEY as string,{expiresIn:"24h"});
     const {password:pw,...userWithoutPassword} = user.toObject();
    
     res.status(200).cookie("token", token, {
@@ -76,4 +80,19 @@ export const handlelogout=async(req:Request,res:Response)=>{
   
     return res.status(500).json({ msg: "Logout failed", error: err });
 }
+}
+
+export const getuserprofile=async(req:Authrequest,res:Response)=>{
+  if(!req.user){
+    return res.status(401).json({msg:"User not authenticated"});
+  }
+  try{
+    const user= await User.findById(req.user.id).select("-password");
+    if(!user){
+      return res.status(404).json({msg:"User not found"});
+    } 
+    return res.status(200).json({user});
+  }catch(err){
+    return res.status(500).json({msg:"Internal server error",error:err});
+  } 
 }

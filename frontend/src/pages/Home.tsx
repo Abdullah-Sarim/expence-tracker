@@ -12,7 +12,6 @@ import AddTransactionModal from "./AddTransactionModel";
 import { IndianRupee, TrendingUp, Wallet } from "lucide-react";
 
 type Transaction = {
-  id: string;
   date: string;
   category: string;
   type: "income" | "expense";
@@ -46,17 +45,52 @@ export default function Home() {
   const [range, setRange] = useState<"weekly" | "monthly" | "yearly">("monthly");
 
   const {addTransaction } = useTransaction();
-
-  const handleAddTransaction = (tx: Transaction) => {
-    addTransaction(tx);
+// Add Transaction Handler
+  const handleAddTransaction = async(tx: Transaction) => {
+    try{
+      const res = await fetch("http://localhost:3000/api/transaction/addtransaction", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        credentials: "include",
+        body: JSON.stringify(tx)
+      });
+      const data = await res.json();
+      addTransaction(data.transaction);
+      console.log("Transaction added:", data);
+    } catch (error) {
+      console.error("Error adding transaction:", error);
+    }
+    
   };
- 
-
   const [data, setData] = useState<DashboardData>({
     stats: { income: 0, expense: 0, balance: 0 },
     lineData: [],
     pieData: [],
   });
+ //ananlytics data fetch  
+  const getanalyticsdata=async()=>{
+    try{
+      const res=await fetch(`http://localhost:3000/api/transaction/dashboard?range=${range}`,{
+        method:"GET",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        credentials:"include"
+      });
+      const data=await res.json();
+      console.log("Analytics Data:",data);
+      setData(data);
+    } catch (error) {
+      console.error("Error fetching analytics data:", error);
+    }
+  }
+  useEffect(()=>{
+    getanalyticsdata();
+  },[range]);
+
+  
 
   // 🔥 Mock Data
   useEffect(() => {
@@ -265,6 +299,7 @@ export default function Home() {
         <AddTransactionModal onAdd={handleAddTransaction} />
       </div>
 
+  
       {/* Transactions */}
       <div className="mt-6">
         <Card>

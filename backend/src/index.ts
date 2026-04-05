@@ -21,7 +21,7 @@ connectDB()
 app.use(cookieParser());
 app.use(urlencoded({extended:true}));
 app.use('/api/user',auth);
-app.use('/api/transation',transaction);
+app.use('/api/transaction',transaction);
 app.listen(3000,()=>{
     console.log('server is running on port 3000');
 })

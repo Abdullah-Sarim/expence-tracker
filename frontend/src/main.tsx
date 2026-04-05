@@ -5,6 +5,8 @@ import App from './App.tsx'
 import {ThemeProvider} from 'next-themes'
 import { AuthProvider } from './context/Authcontextprovider.tsx'
 import { TransactionProvider } from './context/Transactioncontextprovider.tsx'
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
@@ -14,6 +16,11 @@ createRoot(document.getElementById('root')!).render(
       enableSystem
       >
     <App />
+     <ToastContainer 
+        position="top-right"
+        autoClose={3000}
+        theme="colored"
+      />
     </ThemeProvider>
     </TransactionProvider>
     </AuthProvider>

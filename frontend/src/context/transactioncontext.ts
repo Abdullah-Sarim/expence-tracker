@@ -7,7 +7,7 @@ export type Transaction = {
   date: string;
   category: string;
   type: "income" | "expense";
-  amount: number;
+  amount: number; 
 };
 
 export type TransactionContextType = {
