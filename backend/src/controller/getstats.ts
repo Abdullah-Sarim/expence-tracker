@@ -1,84 +1,36 @@
-import { Response } from "express";
-import mongoose from "mongoose";
+import { Request, Response } from "express";
 import { Transaction } from "../model/transaction";
-import { Authrequest } from "../middlewares/authmiddleware";
 
-export const getStats = async (req: Authrequest, res: Response) => {
+export const getDashboardData = async (req: Request, res: Response) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        msg: "Unauthorized",
-      });
-    }
+    const range = (req.query.range as string) || "monthly";
 
-    const userId = new mongoose.Types.ObjectId(req.user.id);
-    const type = req.query.type as string;
+    // ⚠️ adjust based on your auth middleware
+    const userId = (req as any).user?.id;
 
-    let matchStage: any = { userId };
-    let groupBy: any;
+    // 🔥 Labels
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-    const now = new Date();
+    // 🔥 Grouping logic
+    let groupId: any;
+    if (range === "weekly") groupId = { $dayOfWeek: "$date" };
+    else if (range === "yearly") groupId = { $year: "$date" };
+    else groupId = { $month: "$date" };
 
-    // 🔥 YEARLY → last 5 years
-    if (type === "yearly") {
-      const currentYear = now.getFullYear();
-      const startYear = currentYear - 4;
-
-      matchStage.date = {
-        $gte: new Date(`${startYear}-01-01`),
-        $lte: new Date(`${currentYear}-12-31`),
-      };
-
-      groupBy = { $year: "$date" };
-    }
-
-    // 🔥 MONTHLY → current year only
-    else if (type === "monthly") {
-      const currentYear = now.getFullYear();
-
-      matchStage.date = {
-        $gte: new Date(`${currentYear}-01-01`),
-        $lte: new Date(`${currentYear}-12-31`),
-      };
-
-      groupBy = { $month: "$date" };
-    }
-
-    // 🔥 WEEKLY → current week (Mon–Sun)
-    else if (type === "weekly") {
-      const day = now.getDay(); // 0=Sun, 1=Mon...
-      const diffToMonday = day === 0 ? -6 : 1 - day;
-
-      const startOfWeek = new Date(now);
-      startOfWeek.setDate(now.getDate() + diffToMonday);
-      startOfWeek.setHours(0, 0, 0, 0);
-
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 6);
-      endOfWeek.setHours(23, 59, 59, 999);
-
-      matchStage.date = {
-        $gte: startOfWeek,
-        $lte: endOfWeek,
-      };
-
-      groupBy = { $dayOfWeek: "$date" }; // 1=Sun ... 7=Sat
-    }
-
-    else {
-      return res.status(400).json({
-        success: false,
-        msg: "Invalid type",
-      });
-    }
-
-    // 🔥 Aggregation
-    const data = await Transaction.aggregate([
-      { $match: matchStage },
+    // =========================
+    // 📊 LINE DATA
+    // =========================
+    const lineAgg = await Transaction.aggregate([
+      {
+        $match: {
+          userId: userId,
+        },
+      },
       {
         $group: {
-          _id: groupBy,
+          _id: groupId,
           income: {
             $sum: {
               $cond: [{ $eq: ["$type", "income"] }, "$amount", 0],
@@ -94,63 +46,88 @@ export const getStats = async (req: Authrequest, res: Response) => {
       { $sort: { _id: 1 } },
     ]);
 
-    // 🔥 FORMAT OUTPUT
+    const lineData = lineAgg.map((item) => {
+      let name: string;
 
-    let formattedData: any = [];
+      if (range === "weekly") name = days[item._id - 1];
+      else if (range === "monthly") name = months[item._id - 1];
+      else name = item._id.toString();
 
-    // 📆 Monthly → Jan–Dec
-    if (type === "monthly") {
-      const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-
-      formattedData = months.map((month, index) => {
-        const found = data.find(d => d._id === index + 1);
-        return {
-          label: month,
-          income: found?.income || 0,
-          expense: found?.expense || 0,
-        };
-      });
-    }
-
-    // 📅 Weekly → Mon–Sun
-    else if (type === "weekly") {
-      const days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-
-      formattedData = days.map((day, index) => {
-        const found = data.find(d => d._id === index + 1);
-        return {
-          label: day,
-          income: found?.income || 0,
-          expense: found?.expense || 0,
-        };
-      });
-    }
-
-    // 📊 Yearly → last 5 years
-    else if (type === "yearly") {
-      const currentYear = now.getFullYear();
-      const years = Array.from({ length: 5 }, (_, i) => currentYear - 4 + i);
-
-      formattedData = years.map((year) => {
-        const found = data.find(d => d._id === year);
-        return {
-          label: year,
-          income: found?.income || 0,
-          expense: found?.expense || 0,
-        };
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      type,
-      data: formattedData,
+      return {
+        name,
+        income: item.income,
+        expense: item.expense,
+      };
     });
 
-  } catch (err) {
+    // =========================
+    // 🥧 PIE DATA
+    // =========================
+    const pieAgg = await Transaction.aggregate([
+      {
+        $match: {
+          userId: userId,
+          type: "expense",
+        },
+      },
+      {
+        $group: {
+          _id: "$category",
+          value: { $sum: "$amount" },
+        },
+      },
+    ]);
+
+    const pieData = pieAgg.map((item) => ({
+      name: item._id,
+      value: item.value,
+    }));
+
+    // =========================
+    // 📈 STATS
+    // =========================
+    const statsAgg = await Transaction.aggregate([
+      {
+        $match: {
+          userId: userId,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          income: {
+            $sum: {
+              $cond: [{ $eq: ["$type", "income"] }, "$amount", 0],
+            },
+          },
+          expense: {
+            $sum: {
+              $cond: [{ $eq: ["$type", "expense"] }, "$amount", 0],
+            },
+          },
+        },
+      },
+    ]);
+
+    const stats = statsAgg[0] || { income: 0, expense: 0 };
+
+    // =========================
+    // ✅ FINAL RESPONSE
+    // =========================
+    return res.status(200).json({
+      stats: {
+        income: stats.income,
+        expense: stats.expense,
+        balance: stats.income - stats.expense,
+      },
+      lineData,
+      pieData,
+    });
+
+  } catch (error) {
+    console.error("Dashboard Error:", error);
     return res.status(500).json({
-      success: false,
-      msg: "Internal server error",
+      message: "Failed to fetch dashboard data",
     });
   }
 };

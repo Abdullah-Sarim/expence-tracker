@@ -8,25 +8,34 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-type Transaction = {
-  id: string;
-  date: string; // ISO format (YYYY-MM-DD)
-  category: string;
-  type: "income" | "expense";
-  amount: number;
-};
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
-type Props = {
-  data: Transaction[];
-};
+import { Trash2 } from "lucide-react";
 
-export default function TransactionTable({ data }: Props) {
+
+
+import { useTransaction } from "../Hooks/usetransaction";
+export default function TransactionTable() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-
-  // 🔥 Filtering logic
+    const { transactions, deleteTransaction } = useTransaction();
+    const onDelete = (id: string) => {
+      deleteTransaction(id);
+    };
+    const  data=transactions;
+  
   const filteredData = data.filter((tx) => {
     const matchesSearch = tx.category
       .toLowerCase()
@@ -52,10 +61,8 @@ export default function TransactionTable({ data }: Props) {
   return (
     <div className="space-y-4">
 
-      {/* 🔥 Filters */}
+      
       <div className="flex flex-wrap gap-4 items-center">
-
-        {/* 🔍 Category Search */}
         <input
           type="text"
           placeholder="Search category..."
@@ -64,7 +71,6 @@ export default function TransactionTable({ data }: Props) {
           className="border rounded-lg px-3 py-2 bg-background"
         />
 
-        {/* ⬇️ Type Filter */}
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
@@ -75,7 +81,6 @@ export default function TransactionTable({ data }: Props) {
           <option value="expense">Expense</option>
         </select>
 
-        {/* 📅 From Date */}
         <input
           type="date"
           value={fromDate}
@@ -83,17 +88,15 @@ export default function TransactionTable({ data }: Props) {
           className="border rounded-lg px-3 py-2 bg-background"
         />
 
-        {/* 📅 To Date */}
         <input
           type="date"
           value={toDate}
           onChange={(e) => setToDate(e.target.value)}
           className="border rounded-lg px-3 py-2 bg-background"
         />
-
       </div>
 
-      {/* 🔥 Table */}
+     
       <div className="rounded-xl border bg-card text-card-foreground">
         <Table>
           <TableHeader>
@@ -102,6 +105,7 @@ export default function TransactionTable({ data }: Props) {
               <TableHead>Category</TableHead>
               <TableHead>Type</TableHead>
               <TableHead className="text-right">Amount</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -126,12 +130,44 @@ export default function TransactionTable({ data }: Props) {
                 <TableCell className="text-right font-medium">
                   ₹{tx.amount}
                 </TableCell>
+
+               
+                <TableCell className="text-right">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <button className="text-red-500 hover:bg-red-100 p-2 rounded">
+                        <Trash2 size={18} />
+                      </button>
+                    </AlertDialogTrigger>
+
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          Delete Transaction?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete your transaction.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => onDelete(tx.id)}
+                          className="bg-red-500 hover:bg-red-600"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </TableCell>
               </TableRow>
             ))}
 
             {filteredData.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-4">
+                <TableCell colSpan={5} className="text-center py-4">
                   No transactions found
                 </TableCell>
               </TableRow>

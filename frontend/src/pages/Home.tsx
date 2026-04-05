@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import IncomeExpenseChart from "./IncomeExpenseChart";
 import ExpensePieChart from "./ExpensePieChart";
-import { ThemeToggle } from "../utils/Themetoggle";
-import TransactionTable from'./TransactionTable'
+import TransactionTable from "./TransactionTable";
 import {
   Card,
   CardContent,
@@ -11,6 +10,14 @@ import {
 } from "@/components/ui/card";
 import AddTransactionModal from "./AddTransactionModel";
 import { IndianRupee, TrendingUp, Wallet } from "lucide-react";
+
+type Transaction = {
+  id: string;
+  date: string;
+  category: string;
+  type: "income" | "expense";
+  amount: number;
+};
 
 type Stats = {
   income: number;
@@ -34,38 +41,16 @@ type DashboardData = {
   lineData: LineData[];
   pieData: PieData[];
 };
-
-import { Plus } from "lucide-react"
+import { useTransaction } from "../Hooks/usetransaction";
 export default function Home() {
   const [range, setRange] = useState<"weekly" | "monthly" | "yearly">("monthly");
 
+  const {addTransaction } = useTransaction();
 
-  const [transactions, setTransactions] = useState([
-  {
-    id: "1",
-    date: "2026-04-01",
-    category: "Food",
-    type: "expense",
-    amount: 500,
-  },
-  {
-    id: "2",
-    date: "2026-04-02",
-    category: "Salary",
-    type: "income",
-    amount: 20000,
-  },
-  {
-    id: "3",
-    date: "2026-04-03",
-    category: "Travel",
-    type: "expense",
-    amount: 1200,
-  },
-]);
-const handleAddTransaction = (tx: Transaction) => {
-  setTransactions((prev) => [tx, ...prev]);
-};
+  const handleAddTransaction = (tx: Transaction) => {
+    addTransaction(tx);
+  };
+ 
 
   const [data, setData] = useState<DashboardData>({
     stats: { income: 0, expense: 0, balance: 0 },
@@ -129,10 +114,31 @@ const handleAddTransaction = (tx: Transaction) => {
     }
   }, [range]);
 
+
+  const analytics = useMemo(() => {
+    const income = data.stats.income;
+    const expense = data.stats.expense;
+    const balance = data.stats.balance;
+
+    const savingRate = income
+      ? ((balance / income) * 100).toFixed(1)
+      : "0";
+
+    const avgTransaction = Math.round(
+      (income + expense) / (data.lineData.length || 1)
+    );
+
+    const topCategory =
+      [...data.pieData].sort((a, b) => b.value - a.value)[0]?.name ||
+      "N/A";
+
+    return { savingRate, avgTransaction, topCategory };
+  }, [data]);
+
   return (
     <div className="min-h-screen bg-background text-foreground p-6">
-      
-      {/* 🔥 Header */}
+
+      {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Finance Dashboard</h1>
 
@@ -150,45 +156,46 @@ const handleAddTransaction = (tx: Transaction) => {
               {item}
             </button>
           ))}
-
-          <ThemeToggle />
+         
         </div>
       </div>
 
-      {/* 🔥 Stats */}
+   
+
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
 
-        <Card className="bg-card text-card-foreground shadow-md">
+        <Card>
           <CardHeader className="flex justify-between flex-row items-center">
             <CardTitle>Total Expense</CardTitle>
             <IndianRupee className="text-red-500" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-red-500">
+            <p className="text-xl font-bold text-red-500">
               ₹{data.stats.expense}
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-card text-card-foreground shadow-md">
+        <Card>
           <CardHeader className="flex justify-between flex-row items-center">
             <CardTitle>Total Income</CardTitle>
             <TrendingUp className="text-green-500" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-green-500">
+            <p className="text-xl font-bold text-green-500">
               ₹{data.stats.income}
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-card text-card-foreground shadow-md">
+        <Card>
           <CardHeader className="flex justify-between flex-row items-center">
-            <CardTitle>Total Balance</CardTitle>
+            <CardTitle>Balance</CardTitle>
             <Wallet className="text-blue-500" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-blue-500">
+            <p className="text-xl font-bold text-blue-500">
               ₹{data.stats.balance}
             </p>
           </CardContent>
@@ -196,10 +203,9 @@ const handleAddTransaction = (tx: Transaction) => {
 
       </div>
 
-      {/* 🔥 Charts */}
+      {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-        <Card className="bg-card text-card-foreground shadow-md">
+        <Card>
           <CardHeader>
             <CardTitle>Income vs Expense</CardTitle>
           </CardHeader>
@@ -208,7 +214,7 @@ const handleAddTransaction = (tx: Transaction) => {
           </CardContent>
         </Card>
 
-        <Card className="bg-card text-card-foreground shadow-md">
+        <Card>
           <CardHeader>
             <CardTitle>Expense Breakdown</CardTitle>
           </CardHeader>
@@ -216,26 +222,60 @@ const handleAddTransaction = (tx: Transaction) => {
             <ExpensePieChart data={data.pieData} />
           </CardContent>
         </Card>
+      </div>
+
+         {/*  Insight Cards */}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 my-5">
+
+        <div className="p-5 rounded-xl border bg-muted/40">
+          <div className="flex items-center gap-2 mb-2 text-blue-600">
+            🎯 <h2 className="font-semibold">Top Spending Category</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {analytics.topCategory} is your highest expense category
+          </p>
+        </div>
+
+        <div className="p-5 rounded-xl border bg-green-50 dark:bg-green-900/20">
+          <div className="flex items-center gap-2 mb-2 text-green-600">
+            📈 <h2 className="font-semibold">Savings Rate</h2>
+          </div>
+          <p className="text-sm text-green-700 dark:text-green-300">
+            You are saving <b>{analytics.savingRate}%</b> of your income{" "}
+            {Number(analytics.savingRate) > 30
+              ? "(positive trend)"
+              : "(needs improvement)"}
+          </p>
+        </div>
+
+        <div className="p-5 rounded-xl border bg-muted/40">
+          <div className="flex items-center gap-2 mb-2 text-blue-600">
+            ℹ️ <h2 className="font-semibold">Average Transaction</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Your average transaction is ₹{analytics.avgTransaction}
+          </p>
+        </div>
 
       </div>
 
-<div className="flex items-center gap-3 justify-end py-3">
-  <AddTransactionModal onAdd={handleAddTransaction} />
-</div>
+      {/* Add Transaction */}
+      <div className="flex justify-end py-4">
+        <AddTransactionModal onAdd={handleAddTransaction} />
+      </div>
 
-
-{/* 🔥 Transactions */}
-<div className="mt-6">
-  <Card className="bg-card text-card-foreground shadow-md">
-    <CardHeader>
-      <CardTitle>Recent Transactions</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <TransactionTable data={transactions} />
-    </CardContent>
-  </Card>
-</div>
-      
+      {/* Transactions */}
+      <div className="mt-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Transactions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TransactionTable />
+          </CardContent>
+        </Card>
+      </div>
 
     </div>
   );
