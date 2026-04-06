@@ -49,9 +49,12 @@ export default function Dashboard() {
   if(loading){
     return<div>Loading...</div>
   }
-  if(!user){
+ 
+  useEffect(() => {
+  if (!loading && !user) {
     navigate('/login');
   }
+}, [loading, user]);
   const [range, setRange] = useState<"weekly" | "monthly" | "yearly">("monthly");
 
   const {addTransaction } = useTransaction();
@@ -91,7 +94,11 @@ export default function Dashboard() {
       });
       const data=await res.json();
       console.log("Analytics Data:",data);
-      setData(data);
+      setData({
+  stats: data?.stats || { income: 0, expense: 0, balance: 0 },
+  lineData: data?.lineData || [],
+  pieData: data?.pieData || [],
+});
     } catch (error) {
       console.error("Error fetching analytics data:", error);
     }
@@ -102,67 +109,12 @@ export default function Dashboard() {
 
   
 
-  //Mock data for testing
-  useEffect(() => {
-    if (range === "weekly") {
-      setData({
-        stats: { income: 0, expense: 0, balance: 0 },
-        lineData: [
-          { name: "Mon", income: 0, expense: 0 },
-          { name: "Tue", income: 0, expense: 0 },
-          { name: "Wed", income: 0, expense: 0 },
-          { name: "Thu", income: 0, expense: 0 },
-          { name: "Fri", income: 0, expense: 0 },
-          { name: "Sat", income: 0, expense: 0 },
-          { name: "Sun", income: 0, expense: 0 },
-        ],
-        pieData: [
-          { name: "Food", value: 0 },
-          { name: "Rent", value: 0 },
-          { name: "Travel", value: 0 },
-          { name: "Shopping", value: 0 },
-        ],
-      });
-    } else if (range === "yearly") {
-      setData({
-        stats: { income: 0, expense: 0, balance: 0 },
-        lineData: [
-          { name: "2021", income: 0, expense: 0 },
-          { name: "2022", income: 0, expense: 0},
-          { name: "2023", income: 0, expense: 0 },
-          { name: "2024", income: 0, expense: 0 },
-        ],
-        pieData: [
-          { name: "Food", value: 80 },
-          { name: "Rent", value: 120 },
-          { name: "Travel", value: 60 },
-          { name: "Shopping", value: 40 },
-        ],
-      });
-    } else {
-      setData({
-        stats: { income: 80, expense: 50, balance: 30 },
-        lineData: [
-          { name: "Jan", income: 0, expense: 0 },
-          { name: "Feb", income: 0, expense: 0 },
-          { name: "Mar", income: 0, expense: 0 },
-          { name: "Apr", income: 0, expense: 0 },
-        ],
-        pieData: [
-          { name: "Food", value: 0 },
-          { name: "Rent", value: 0 },
-          { name: "Travel", value:0 },
-          { name: "Shopping", value:0 },
-        ],
-      });
-    }
-  }, [range]);
 
 
   const analytics = useMemo(() => {
-    const income = data.stats.income;
-    const expense = data.stats.expense;
-    const balance = data.stats.balance;
+    const income = data.stats.income||0;
+    const expense = data.stats.expense||0;
+    const balance = data.stats.balance||0;
 
     const savingRate = income
       ? ((balance / income) * 100).toFixed(1)
