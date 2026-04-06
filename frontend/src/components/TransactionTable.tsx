@@ -9,6 +9,15 @@ import {
 } from "@/components/ui/table";
 
 import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -22,20 +31,22 @@ import {
 
 import { Trash2 } from "lucide-react";
 
-import {type Transaction } from "../context/transactioncontext";
 
 import { useTransaction } from "../Hooks/usetransaction";
 export default function TransactionTable() {
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
     const { transactions, deleteTransaction,setTransactions } = useTransaction();
+
+    const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
   //get transactions from db 
 
   const gettransactions = async() => {
     try{
-      const res = await fetch("http://localhost:3000/api/transaction/alltransactions", {
+      const res = await fetch(`http://localhost:3000/api/transaction/alltransactions?$page=${currentPage}&$limit=${10}&type=${typeFilter}&category=${search}&from=${fromDate}$to=${toDate}`, {
         method: "GET",
         credentials: "include",
       });
@@ -43,15 +54,21 @@ export default function TransactionTable() {
         throw new Error("Failed to fetch transactions");
       }
       const data = await res.json();
-      console.log("Fetched transactions:", data);
-      setTransactions(data.transactions);
+     
+        console.log("Transactions fetched successfully",data);
+         setTransactions(data.transactions);
+         setCurrentPage(data.currentPage);
+         setTotalPages(data.totalPages);
+         
+      
+      
     } catch (error) {
       console.error("Error fetching transactions:", error);
     }
   };
   useEffect(()=>{
     gettransactions();
-  },[])
+  },[search, typeFilter, fromDate, toDate, currentPage]);
  
     //delete transaction handler  
     const onDelete = async(id: string) => {
@@ -75,29 +92,7 @@ export default function TransactionTable() {
       }
      
     };
-    const  data=transactions;
-  
-  const filteredData = data.filter((tx: Transaction) => {
-    const matchesSearch = tx.category
-      .toLowerCase()
-      .includes(search.toLowerCase());
 
-    const matchesType =
-      typeFilter === "all" || tx.type === typeFilter;
-
-    const matchesFromDate =
-      !fromDate || new Date(tx.date) >= new Date(fromDate);
-
-    const matchesToDate =
-      !toDate || new Date(tx.date) <= new Date(toDate);
-
-    return (
-      matchesSearch &&
-      matchesType &&
-      matchesFromDate &&
-      matchesToDate
-    );
-  });
 
   return (
     <div className="space-y-4">
@@ -117,7 +112,7 @@ export default function TransactionTable() {
           onChange={(e) => setTypeFilter(e.target.value)}
           className="border rounded-lg px-3 py-2 bg-background"
         >
-          <option value="all">All Types</option>
+          <option value="">All Types</option>
           <option value="income">Income</option>
           <option value="expense">Expense</option>
         </select>
@@ -151,7 +146,7 @@ export default function TransactionTable() {
           </TableHeader>
 
           <TableBody>
-            {filteredData.map((tx) => (
+            {transactions.map((tx) => (
               <TableRow key={tx.id}>
                 <TableCell>{tx.date}</TableCell>
                 <TableCell>{tx.category}</TableCell>
@@ -206,7 +201,7 @@ export default function TransactionTable() {
               </TableRow>
             ))}
 
-            {filteredData.length === 0 && (
+            {transactions.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-4">
                   No transactions found
@@ -215,6 +210,41 @@ export default function TransactionTable() {
             )}
           </TableBody>
         </Table>
+        { transactions.length>0 && (
+        <Pagination>
+  <PaginationContent>
+
+    {/* ⬅️ Previous */}
+    <PaginationItem>
+      <PaginationPrevious
+        onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+      />
+    </PaginationItem>
+
+    {/* 🔢 Page Numbers */}
+    {Array.from({ length: totalPages }, (_, i) => (
+      <PaginationItem key={i}>
+        <PaginationLink
+          isActive={currentPage === i + 1}
+          onClick={() => setCurrentPage(i + 1)}
+        >
+          {i + 1}
+        </PaginationLink>
+      </PaginationItem>
+    ))}
+
+   
+    <PaginationItem>
+      <PaginationNext
+        onClick={() =>
+          setCurrentPage((p) => Math.min(p + 1, totalPages))
+        }
+      />
+    </PaginationItem>
+
+  </PaginationContent>
+</Pagination>
+    )}
       </div>
     </div>
   );

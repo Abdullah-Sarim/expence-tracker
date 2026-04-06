@@ -77,7 +77,7 @@ export const deletetransaction = async (req: Authrequest, res: Response) => {
       });
     }
 
-    // 🔥 IMPORTANT: check ownership
+  
     if (transaction.userId.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -100,35 +100,99 @@ export const deletetransaction = async (req: Authrequest, res: Response) => {
   }
 
 };
+export const gettransaction = async (req: Authrequest, res: Response) => {
+  const userId = req.user?.id;
 
-export const gettransaction=async(req:Authrequest,res:Response)=>{
-    const userId=req.user?.id;
-    if(!userId){
-        return res.status(401).json({
-            success:false,
-            msg:"user id not found",
-        })
+  if (!userId) {
+    return res.status(401).json({
+      success: false,
+      msg: "user id not found",
+    });
+  }
+
+  try {
+    
+    const {
+      page = "1",
+      limit = "5",
+      category,
+      type,
+      from,
+      to,
+    } = req.query;
+
+   
+    let pageNumber = parseInt(page as string);
+    let limitNumber = parseInt(limit as string);
+
+    if (pageNumber < 1) pageNumber = 1;
+    if (limitNumber < 1) limitNumber = 5;
+
+    const skip = (pageNumber - 1) * limitNumber;
+
+
+    let filter: any = { userId };
+
+    
+    if (category && category !== "") {
+      filter.category = category;
     }
-    try{
-        const transactions=await Transaction.find({userId});
 
-        const responseTransactions = transactions.map((tx) => ({
-  id: tx._id.toString(),
-  category: tx.category,
-  amount: tx.amount,
-  type: tx.type,
-  date: tx.date.toISOString().split("T")[0], // formatted date
-}));
-
-        return res.status(200).json({
-            success:true,
-            msg:"transactions found",
-            transactions: responseTransactions,
-        });
-    } catch (err) {
-        return res.status(500).json({
-            success:false,
-            msg:"internal server error",
-        });
+ 
+    if (type && type !== "") {
+      filter.type = type;
     }
-} 
+
+   
+    const dateFilter: any = {};
+
+    const fromDate = from ? new Date(from as string) : null;
+    const toDate = to ? new Date(to as string) : null;
+
+    if (fromDate && !isNaN(fromDate.getTime())) {
+      dateFilter.$gte = fromDate;
+    }
+
+    if (toDate && !isNaN(toDate.getTime())) {
+      dateFilter.$lte = toDate;
+    }
+
+ 
+    if (Object.keys(dateFilter).length > 0) {
+      filter.date = dateFilter;
+    }
+
+ 
+    const transactions = await Transaction.find(filter)
+      .sort({ date: -1 }) // latest first
+      .skip(skip)
+      .limit(limitNumber);
+
+    const total = await Transaction.countDocuments(filter);
+
+    const responseTransactions = transactions.map((tx) => ({
+      id: tx._id.toString(),
+      category: tx.category,
+      amount: tx.amount,
+      type: tx.type,
+      date: tx.date.toISOString().split("T")[0],
+    }));
+
+    return res.status(200).json({
+      success: true,
+      msg: "transactions found",
+      currentPage: pageNumber,
+      totalPages: Math.ceil(total / limitNumber),
+      totalTransactions: total,
+      transactions: responseTransactions,
+    });
+
+  } catch (err) {
+    console.error("Error fetching transactions:", err);
+
+    return res.status(500).json({
+      success: false,
+      msg: "internal server error",
+    });
+  }
+};

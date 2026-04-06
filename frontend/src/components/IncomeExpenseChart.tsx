@@ -13,7 +13,7 @@ type Props = {
 
 export default function IncomeExpenseChart({ data }: Props) {
   
-  // ✅ Format numbers (K, M, Cr)
+  
   const formatNumber = (value: number | string): string => {
     const num = typeof value === "number" ? value : Number(value);
 

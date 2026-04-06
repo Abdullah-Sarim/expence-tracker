@@ -14,6 +14,9 @@ export default function ExpensePieChart({ data }: Props) {
   };
 
   return (
+    data.length === 0 ? (
+      <div className="text-center mt-10">No data available Add Transaction to see </div>
+    ) : (
     <PieChart width={320} height={320}>
       <Pie
         data={data}
@@ -30,5 +33,6 @@ export default function ExpensePieChart({ data }: Props) {
       <Tooltip />
       <Legend verticalAlign="bottom" />
     </PieChart>
+      )
   );
 }
