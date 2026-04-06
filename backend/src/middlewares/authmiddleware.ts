@@ -1,16 +1,14 @@
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { Request,Response,NextFunction } from "express";
-import { IUser } from "../model/user";
+
 dotenv.config();
 
 interface JwtPayload {
   id: string;
 }
-export interface Authrequest extends Request{
-    user?:{
-        id:string
-    }
+export interface Authrequest extends Request {
+  user?: any;
 }
 const protect = (req:Authrequest, res:Response, next:NextFunction) => {
  const token=req.cookies.token;
