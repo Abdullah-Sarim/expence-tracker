@@ -12,7 +12,10 @@ const navigate = useNavigate();
     try{
       const res = await fetch(`${import.meta.env.VITE_BASE_URL}/api/user/logout`, {
         method: "GET",
-        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
       });
       if (!res.ok) {
         throw new Error("Failed to logout");
