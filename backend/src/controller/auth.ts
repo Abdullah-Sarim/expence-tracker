@@ -36,6 +36,8 @@
         httpOnly: true,   
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax" ,
+        domain:process.env.PRODUCTION_URL,
+        path: "/",
         maxAge: 24 * 60 * 60 * 1000, 
       }).json({user:userWithoutPassword, msg: "Login successful" });
   }
