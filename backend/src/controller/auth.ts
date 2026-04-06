@@ -32,14 +32,10 @@
       const token:string = jwt.sign({id:user._id},process.env.SECRETKEY as string,{expiresIn:"24h"});
       const {password:pw,...userWithoutPassword} = user.toObject();
     
-      res.status(200).cookie("token", token, {
-        httpOnly: true,   
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax" ,
-        domain:process.env.PRODUCTION_URL,
-        path: "/",
-        maxAge: 24 * 60 * 60 * 1000, 
-      }).json({user:userWithoutPassword, msg: "Login successful" });
+      res.status(200).json({
+        token,
+        user:userWithoutPassword, 
+        msg: "Login successful" });
   }
   export const handlesignup=async(req:Request,res:Response)=>{
 
@@ -70,18 +66,13 @@
       res.status(201).json({success:true,msg: "User created successfully" });
 
   }
-  export const handlelogout=async(req:Request,res:Response)=>{
-    try {res.clearCookie("token",{
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",   
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax" 
-    });
-      return res.status(200).json({msg:"User logged out successfully"});
-  }catch(err){
-    
-      return res.status(500).json({ msg: "Logout failed", error: err });
+ export const handlelogout = async (req: Request, res: Response) => {
+  try {
+    return res.status(200).json({ msg: "User logged out successfully" });
+  } catch (err) {
+    return res.status(500).json({ msg: "Logout failed", error: err });
   }
-  }
+};
 
   export const getuserprofile=async(req:Authrequest,res:Response)=>{
     if(!req.user){
